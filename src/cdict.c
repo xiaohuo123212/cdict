@@ -135,6 +135,21 @@ cdict_value cdict_search(const cdict *d, cdict_value key)
 }
 
 /* ------------------------------------------------------------------ *
+ * 类型化入口：只负责把参数包成 cdict_value，再转发给 cdict_search。
+ * 它们由头文件里的 cdict_find 宏自动选择，通常不直接调用。
+ * ------------------------------------------------------------------ */
+
+cdict_value cdict_search_key_i(const cdict *d, int key)
+{
+    return cdict_search(d, cdv_int(key));
+}
+
+cdict_value cdict_search_key_s(const cdict *d, const char *key)
+{
+    return cdict_search(d, cdv_str(key));
+}
+
+/* ------------------------------------------------------------------ *
  * 只读访问器
  * ------------------------------------------------------------------ */
 

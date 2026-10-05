@@ -85,6 +85,31 @@ bool cdict_add(cdict *d, const char *word, int num);
  * 未命中时返回 kind == CDV_NONE 的值（.i / .s 无意义）。 */
 cdict_value cdict_search(const cdict *d, cdict_value key);
 
+/* ---- 类型化入口 ----
+ * 把参数包成 cdict_value 再转发给 cdict_search。
+ * 通常不用直接调用它们，而是通过下面的 cdict_find 宏自动选择。 */
+cdict_value cdict_search_key_i(const cdict *d, int key);
+cdict_value cdict_search_key_s(const cdict *d, const char *key);
+
+/* ---- 泛型查找宏 ----
+ * 按 key 的【静态类型】在编译期选择上面两个之一，零运行时开销。
+ * 它只是语法糖 —— cdict_search 照常可用，行为完全一致。
+ *
+ * 只支持 int 和字符串。其他类型（double / short / long ...）会编译报错，
+ * 这是有意为之：避免 long 之类被静默截断成 int 而算错键值。
+ *
+ * C++ 下不提供这个宏（_Generic 是 C11 特性），C++ 用户请直接用 cdict_search。 */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__cplusplus)
+#  define cdict_find(d, key)                        \
+        _Generic((key),                             \
+            cdict_value:  cdict_search,             \
+            int:          cdict_search_key_i,       \
+            char *:       cdict_search_key_s,       \
+            const char *: cdict_search_key_s        \
+        )((d), (key))
+#endif
+
+
 /* ---- 只读访问器 ---- */
 
 size_t cdict_count(const cdict *d);      /* 已存条目数 */

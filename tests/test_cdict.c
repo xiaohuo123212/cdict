@@ -263,6 +263,72 @@ static void test_independent(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* cdict_find：_Generic 泛型入口                                       */
+/* ------------------------------------------------------------------ */
+static void test_generic(void)
+{
+    puts("generic (_Generic dispatch)");
+
+    cdict *d = cdict_new();
+    cdict_init(d, 16);
+    cdict_add(d, "hello", 1);
+    cdict_add(d, "world", 2);
+    cdict_add(d, "c", 3);
+
+    /* int 分支 */
+    cdict_value r = cdict_find(d, 2);
+    CHECK(r.kind == CDV_STR);
+    CHECK(r.kind == CDV_STR && strcmp(r.s, "world") == 0);
+
+    /* 字符串【字面量】：类型是 char[6]，会退化成 char * */
+    r = cdict_find(d, "hello");
+    CHECK(r.kind == CDV_INT && r.i == 1);
+
+    /* const char * 变量 —— 宏里少了这条分支就会在这里编译失败 */
+    {
+        const char *s = "c";
+        r = cdict_find(d, s);
+        CHECK(r.kind == CDV_INT && r.i == 3);
+    }
+
+    /* 非 const 的 char[] —— 同样退化成 char * */
+    {
+        char buf[] = "world";
+        r = cdict_find(d, buf);
+        CHECK(r.kind == CDV_INT && r.i == 2);
+    }
+
+    /* 已经构造好的 cdict_value：原样透传 */
+    r = cdict_find(d, cdv_int(2));
+    CHECK(r.kind == CDV_STR && strcmp(r.s, "world") == 0);
+
+    /* 未命中 */
+    CHECK(cdict_find(d, cdv_int(999)).kind == CDV_NONE);
+    CHECK(cdict_find(d, "nope").kind       == CDV_NONE);
+
+    /* 它只是语法糖：结果必须和 cdict_search 完全一致 */
+    {
+        cdict_value a = cdict_find(d, 2);
+        cdict_value b = cdict_search(d, cdv_int(2));
+        CHECK(a.kind == b.kind);
+        CHECK(a.kind == CDV_STR && strcmp(a.s, b.s) == 0);
+
+        cdict_value c = cdict_find(d, "hello");
+        cdict_value e = cdict_search(d, cdv_str("hello"));
+        CHECK(c.kind == e.kind);
+        CHECK(c.kind == CDV_INT && c.i == e.i);
+    }
+
+    /* 注意：本文件【没有】覆盖「传 double / short / long 会编译报错」这种情况，
+     * 因为那会让整个测试文件编译不过，它属于「编译失败测试」。
+     * 手工验证：临时写一行 cdict_find(d, 3.14) 编译一下，应当报
+     *     '_Generic' selector of type 'double' is not compatible with any association
+     * 确认后删掉即可。 */
+
+    cdict_free(d);
+}
+
+/* ------------------------------------------------------------------ */
 
 int main(void)
 {
@@ -275,6 +341,7 @@ int main(void)
     test_invalid_args();
     test_reinit();
     test_independent();
+    test_generic();
 
     printf("\n%d passed, %d failed\n", g_passed, g_failed);
     return g_failed ? 1 : 0;        /* 失败时返回非零，CI 才能抓到 */
