@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: msys2/setup-msys2@v2
         with:
+          msystem: UCRT64          # 不指定的话默认是 MSYS 环境，里面没有 ucrt64 的 gcc
           install: >-
             make
             mingw-w64-ucrt-x86_64-gcc
