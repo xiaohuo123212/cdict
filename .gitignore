@@ -1,0 +1,22 @@
+# 构建产物
+demo
+demo.exe
+test_runner
+test_runner.exe
+test_asan
+test_asan.exe
+*.o
+*.obj
+*.out
+*.dSYM/
+build/
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# 系统
+.DS_Store
+Thumbs.db

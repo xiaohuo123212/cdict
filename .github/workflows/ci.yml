@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # ---- Linux / macOS，GCC 与 Clang 各编一遍 ----
+  unix:
+    name: ${{ matrix.os }} / ${{ matrix.cc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: make test CC=${{ matrix.cc }}
+
+  # ---- Windows（MSYS2 + MinGW） ----
+  windows:
+    name: windows-latest / gcc
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+      - name: Build and test
+        run: make test CC=gcc
+
+  # ---- 内存 / 未定义行为检查 ----
+  sanitize:
+    name: ASan + UBSan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run sanitizers
+        run: make asan
+
+  # ---- 严格模式：把警告当错误 ----
+  strict:
+    name: -Werror
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with warnings as errors
+        run: |
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -Wshadow \
+              -Wconversion -Wsign-conversion -Wcast-qual \
+              -Iinclude tests/test_cdict.c src/cdict.c -o test_strict
+          ./test_strict
